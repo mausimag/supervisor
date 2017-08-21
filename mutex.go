@@ -56,7 +56,7 @@ func (m *Mutex) Acquire(waitTime int64, unit time.Duration) error {
 
 		select {
 		case <-timeout:
-			return err
+			return errors.New("Timeout")
 		case event := <-channel:
 			if event.Type == zk.EventNodeChildrenChanged {
 				nodeGUIDList, err := m.client.getSortedNodeGUIDList(m.path)
