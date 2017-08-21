@@ -53,65 +53,96 @@ func (ni ByNodeGUID) Less(i, j int) bool {
 
 // RoleSelector holds role selector information
 type RoleSelector struct {
-	client           *Client
-	roleChangeCb     NodeRoleChangeFunc
+	client *Client
+
 	notificationSent bool
 	path             string
+	guid             string
 	nodePath         string
+	Role             NodeRole
+
+	IsMaster chan bool
+	Error    chan error
+	close    chan bool
 }
 
 // Start starts listening for node role change
-func (rs *RoleSelector) Start() error {
+func (rs *RoleSelector) Start() {
 	if !rs.client.isConnected {
-		return errors.New("Client not connected")
+		rs.Error <- errors.New("Client not connected")
 	}
 
 	_, err := rs.client.createParentNodeIfNotExists(rs.path, []byte{})
 	if err != nil {
-		return err
+		rs.Error <- err
 	}
 
 	abspath, guid, err := rs.client.createProtectedEphemeralSequential(rs.path, []byte{})
 	if err != nil {
-		return fmt.Errorf("%s - %s", err.Error(), rs.path)
+		rs.Error <- fmt.Errorf("%s - %s", err.Error(), rs.path)
 	}
-	rs.nodePath = abspath
 
+	rs.nodePath = abspath
+	rs.guid = guid
+
+	go rs.listen()
+}
+
+func (rs *RoleSelector) listen() {
 	for {
 		children, _, channel, err := rs.client.childrenWatch(rs.path)
 		if err != nil {
-			return err
+			rs.Error <- err
 		}
 
 		if len(children) == 1 && !rs.notificationSent {
 			rs.client.currentRole = NodeRoleMaster
 			rs.notificationSent = true
-			go rs.roleChangeCb()
+			rs.Role = NodeRoleMaster
+			rs.IsMaster <- true
 		}
 
-		event := <-channel
+		select {
+		case event := <-channel:
+			rs.notify(event)
+		case <-rs.close:
 
-		if event.Type == zk.EventNodeChildrenChanged {
-			nodeGUIDList, err := rs.client.getSortedNodeGUIDList(rs.path)
-			if err != nil {
-				return err
-			}
+		}
+	}
+}
+func (rs *RoleSelector) notify(event zk.Event) {
+	if event.Type == zk.EventNodeChildrenChanged {
+		nodeGUIDList, err := rs.client.getSortedNodeGUIDList(rs.path)
+		if err != nil {
+			rs.Error <- err
+		}
 
-			// notify only if current node turns master
-			if nodeGUIDList[0] == guid && rs.client.currentRole != NodeRoleMaster && !rs.notificationSent {
+		// notify only if current node turns master
+		if len(nodeGUIDList[0]) > 0 {
+			if nodeGUIDList[0] == rs.guid && rs.client.currentRole == NodeRoleSlave && rs.notificationSent == false {
 				rs.notificationSent = true
-				go rs.roleChangeCb()
+				rs.Role = NodeRoleMaster
+				rs.IsMaster <- true
 			}
 		}
 	}
 }
 
+// Stop stops listening for node role change
+func (rs *RoleSelector) Stop() {
+	rs.close <- true
+	rs.client.zkConn.Close()
+}
+
 // NewRoleSelector returns new role selector for master election
-func NewRoleSelector(c *Client, path string, roleChangeCb NodeRoleChangeFunc) *RoleSelector {
+func NewRoleSelector(c *Client, path string) *RoleSelector {
 	rs := RoleSelector{
-		client:       c,
-		path:         path,
-		roleChangeCb: roleChangeCb,
+		client:   c,
+		path:     path,
+		Role:     NodeRoleSlave,
+		IsMaster: make(chan bool),
+		Error:    make(chan error),
+		close:    make(chan bool),
 	}
 	return &rs
 }

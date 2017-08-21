@@ -20,11 +20,15 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
-	election := supervisor.NewRoleSelector(client, "/election/test01", func() {
-		fmt.Println("CURRENT NODE IS: MASTER")
-	})
+	election := supervisor.NewRoleSelector(client, "/election/test01")
+	election.Start()
 
-	if err := election.Start(); err != nil {
-		fmt.Println(err)
+	for {
+		select {
+		case <-election.IsMaster:
+			fmt.Println("CURRENT NODE IS MASTER")
+		case err := <-election.Error:
+			fmt.Println("Error:", err)
+		}
 	}
 }

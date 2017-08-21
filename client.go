@@ -125,7 +125,7 @@ func (c *Client) createProtectedEphemeralSequential(path string, data []byte) (s
 	if err != nil {
 		return "", "", err
 	}
-	guid := npath[len(path):]
+	guid := npath[len(path)+1:]
 	return npath, guid, nil
 }
 
