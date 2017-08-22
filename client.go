@@ -150,6 +150,11 @@ func (c *Client) deleteNode(path string) error {
 	return c.zkConn.Delete(path, 0)
 }
 
+// Disconnect disconect from zk servers
+func (c *Client) Disconnect() {
+	c.zkConn.Close()
+}
+
 // NewClient creates new Supervisor client
 func NewClient(options ...NodeOpionsFunc) *Client {
 	n := &Client{

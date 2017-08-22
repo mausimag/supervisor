@@ -129,9 +129,14 @@ func (rs *RoleSelector) notify(event zk.Event) {
 }
 
 // Stop stops listening for node role change
-func (rs *RoleSelector) Stop() {
+func (rs *RoleSelector) Stop() error {
 	rs.close <- true
-	rs.client.zkConn.Close()
+
+	if err := rs.client.deleteNode(rs.nodePath); err != nil {
+		return fmt.Errorf("Could not remove node %s - %s", rs.nodePath, err.Error())
+	}
+
+	return nil
 }
 
 // NewRoleSelector returns new role selector for master election
