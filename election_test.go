@@ -19,6 +19,12 @@ func makeClientSlice(q int) []*Client {
 	return r
 }
 
+func closeClients(clients []*Client) {
+	for _, client := range clients {
+		client.Disconnect()
+	}
+}
+
 func createElection(clients []*Client) []*RoleSelector {
 	lc := len(clients)
 	r := make([]*RoleSelector, lc)

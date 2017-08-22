@@ -118,7 +118,7 @@ func (rs *RoleSelector) notify(event zk.Event) {
 		}
 
 		// notify only if current node turns master
-		if len(nodeGUIDList[0]) > 0 {
+		if len(nodeGUIDList) > 0 {
 			if nodeGUIDList[0] == rs.guid && rs.client.currentRole == NodeRoleSlave && rs.notificationSent == false {
 				rs.notificationSent = true
 				rs.Role = NodeRoleMaster
