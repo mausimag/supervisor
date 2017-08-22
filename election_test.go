@@ -1,84 +1,67 @@
 package supervisor
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func getClient() (Client, error) {
-	client := NewClient(
-		SetZookeeperNodes("127.0.0.1"),
-	)
-	client.Connect()
-	return *client, nil
-}
-
 func makeClientSlice(q int) []*Client {
 	var r []*Client
 	for i := 0; i < q; i++ {
-		c, _ := getClient()
-		r = append(r, &c)
+		c := NewClient(
+			SetZookeeperNodes("127.0.0.1"),
+		)
+		c.Connect()
+		r = append(r, c)
 	}
 	return r
 }
 
-func startListen(idx int, e *RoleSelector, done chan bool) {
-	e.Start()
-	for {
-		select {
-		case <-e.IsMaster:
-			fmt.Println("CURRENT NODE IS MASTER - ", idx)
-			done <- true
-		case err := <-e.Error:
-			fmt.Println("Error:", err)
-			done <- true
-		}
+func createElection(clients []*Client) []*RoleSelector {
+	lc := len(clients)
+	r := make([]*RoleSelector, lc)
+
+	// create master
+	election01 := NewRoleSelector(clients[0], "/election/test01")
+	election01.Start()
+
+	// wait for the master
+	<-election01.IsMaster
+	r[0] = election01
+	close(election01.IsMaster)
+
+	// start slaves
+	for idx := 1; idx < lc; idx++ {
+		e := NewRoleSelector(clients[idx], "/election/test01")
+		e.Start()
+		r[idx] = e
 	}
+
+	return r
 }
-
-func TestSimple(t *testing.T) {
+func TestElectionSimple(t *testing.T) {
 	assert := assert.New(t)
-
 	clients := makeClientSlice(2)
+	election := createElection(clients)
 
-	election01 := NewRoleSelector(clients[0], "/election/test01")
-	election02 := NewRoleSelector(clients[1], "/election/test01")
+	assert.Equal(election[0].Role, NodeRoleMaster)
+	assert.Equal(election[1].Role, NodeRoleSlave)
 
-	done := make(chan bool, 2)
-	go startListen(0, election01, done)
-	<-done
-
-	go startListen(1, election02, done)
-
-	assert.Equal(election01.Role, NodeRoleMaster)
-	assert.Equal(election02.Role, NodeRoleSlave)
-
-	election01.Stop()
-	election02.Stop()
+	election[1].Stop()
+	election[0].Stop()
 }
-
-func TestSimpleDisconnect(t *testing.T) {
+func TestElectionDisconnect(t *testing.T) {
 	assert := assert.New(t)
-
 	clients := makeClientSlice(2)
+	election := createElection(clients)
 
-	election01 := NewRoleSelector(clients[0], "/election/test01")
-	election02 := NewRoleSelector(clients[1], "/election/test01")
+	assert.Equal(election[0].Role, NodeRoleMaster)
+	assert.Equal(election[1].Role, NodeRoleSlave)
 
-	done := make(chan bool, 2)
-	go startListen(0, election01, done)
-	<-done
-
-	go startListen(1, election02, done)
-
-	assert.Equal(election01.Role, NodeRoleMaster)
-	assert.Equal(election02.Role, NodeRoleSlave)
-
-	election01.Stop()
+	election[0].Stop()
 	time.Sleep(2 * time.Second)
 
-	assert.Equal(election02.Role, NodeRoleMaster)
+	assert.Equal(election[1].Role, NodeRoleMaster)
 }
