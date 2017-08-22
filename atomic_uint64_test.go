@@ -23,6 +23,8 @@ func TestAtomicUint64SetGet(t *testing.T) {
 
 	val, _ := vint64.Get()
 	assert.Equal(val, uint64(10))
+
+	client.Disconnect()
 }
 
 func TestAtomicUint64SetGetIncDec(t *testing.T) {
@@ -49,4 +51,6 @@ func TestAtomicUint64SetGetIncDec(t *testing.T) {
 	assert.Equal(vint64.Decrement(), nil)
 	val, _ = vint64.Get()
 	assert.Equal(val, uint64(10))
+
+	client.Disconnect()
 }

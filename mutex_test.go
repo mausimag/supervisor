@@ -23,6 +23,7 @@ func TestMutexTimeout(t *testing.T) {
 	}
 
 	assert.Equal(firstLock.Release(), nil)
+
 	closeClients(clients)
 }
 
@@ -43,4 +44,6 @@ func TestMutexMultipleLockAndReleasePrev(t *testing.T) {
 			assert.Equal(lock.Acquire(1, time.Second), nil)
 		}
 	}
+
+	closeClients(clients)
 }

@@ -57,6 +57,8 @@ func TestElectionSimple(t *testing.T) {
 
 	election[1].Stop()
 	election[0].Stop()
+
+	closeClients(clients)
 }
 func TestElectionDisconnect(t *testing.T) {
 	assert := assert.New(t)
@@ -70,4 +72,6 @@ func TestElectionDisconnect(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	assert.Equal(election[1].Role, NodeRoleMaster)
+
+	closeClients(clients)
 }
