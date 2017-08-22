@@ -1,7 +1,7 @@
 Supervisor
 ====================
 
-Just playing with zookeeper.
+Client library for Apache ZooKeeper.
 
 Create client:
 
