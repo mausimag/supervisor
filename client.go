@@ -1,6 +1,7 @@
 package supervisor
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -138,8 +139,19 @@ func (c *Client) deleteBaseNode(path string) error {
 	lparts := len(parts)
 
 	for idx := 0; idx < lparts; idx++ {
-		if err := c.zkConn.Delete("/"+strings.Join(parts[:lparts-idx], "/"), 0); err != nil {
+		curr := "/" + strings.Join(parts[:lparts-idx], "/")
+
+		nodeGUIDList, err := c.getSortedNodeGUIDList(curr)
+		if err != nil {
 			return err
+		}
+
+		if len(nodeGUIDList) > 0 {
+			return nil
+		}
+
+		if err := c.zkConn.Delete(curr, 0); err != nil {
+			return fmt.Errorf("Can't remove %s: %s", curr, err.Error())
 		}
 	}
 

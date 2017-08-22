@@ -31,7 +31,7 @@ func TestMutexMultipleLockAndReleasePrev(t *testing.T) {
 	assert := assert.New(t)
 	clients := makeClientSlice(6)
 	locks := make([]*Mutex, len(clients))
-	lockPath := "/supervisor/test/mutex/key01"
+	lockPath := "/supervisor/test/mutex/key02"
 
 	for idx, client := range clients {
 		locks[idx] = NewMutex(client, lockPath)
