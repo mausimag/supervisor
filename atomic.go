@@ -1,6 +1,11 @@
 package supervisor
 
-import "github.com/samuel/go-zookeeper/zk"
+import (
+	"bytes"
+	"errors"
+
+	"github.com/samuel/go-zookeeper/zk"
+)
 
 // MakeValue the function that tries to save data will call this to transform the value
 type MakeValue func(preValue []byte) []byte
@@ -42,6 +47,31 @@ func (av *atomicValue) get() (*MutableAtomicValue, error) {
 
 	result.postValue = result.preValue
 	return result, nil
+}
+
+func (av *atomicValue) compareAndSet(expected, newValue []byte) error {
+	stat := new(zk.Stat)
+	result := new(MutableAtomicValue)
+
+	exists, err := av.getCurrentValue(result, stat)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return errors.New("Value does not exists")
+	}
+
+	if !bytes.Equal(result.preValue, expected) {
+		return errors.New("Wrong data version")
+	}
+
+	if _, err := av.client.setNodeData(av.path, newValue, stat.Version); err != nil {
+		return err
+	}
+
+	result.postValue = newValue
+	return nil
 }
 
 func (av *atomicValue) trySet(makeValue MakeValue) error {

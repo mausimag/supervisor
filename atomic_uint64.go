@@ -59,6 +59,12 @@ func (ai64 *AtomicUint64) Get() (uint64, error) {
 	return ai64.fromBytes(av.postValue), nil
 }
 
+// CompareAndSet compares expected value with current value
+// if it's equals, than change it's value with newValue
+func (ai64 *AtomicUint64) CompareAndSet(expected, newValue uint64) error {
+	return ai64.atomicValue.compareAndSet(ai64.toBytes(expected), ai64.toBytes(newValue))
+}
+
 func (ai64 *AtomicUint64) toBytes(v uint64) []byte {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, v)

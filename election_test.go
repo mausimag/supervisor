@@ -30,7 +30,7 @@ func createElection(clients []*Client) []*RoleSelector {
 	r := make([]*RoleSelector, lc)
 
 	// create master
-	election01 := NewRoleSelector(clients[0], "/election/test01")
+	election01 := NewRoleSelector(clients[0], "/supervisor/test/election")
 	election01.Start()
 
 	// wait for the master
@@ -40,7 +40,7 @@ func createElection(clients []*Client) []*RoleSelector {
 
 	// start slaves
 	for idx := 1; idx < lc; idx++ {
-		e := NewRoleSelector(clients[idx], "/election/test01")
+		e := NewRoleSelector(clients[idx], "/supervisor/test/election")
 		e.Start()
 		r[idx] = e
 	}
