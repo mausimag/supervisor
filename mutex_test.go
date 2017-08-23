@@ -11,19 +11,18 @@ func TestMutexTimeout(t *testing.T) {
 	assert := assert.New(t)
 	clients := makeClientSlice(5)
 	lc := len(clients)
+	locks := make([]*Mutex, lc)
 	lockPath := "/supervisor/test/mutex/key01"
 
-	firstLock := NewMutex(clients[0], lockPath)
-	firstLock.Acquire(1, time.Second)
-	assert.Equal(firstLock.Acquire(1, time.Second), nil)
+	locks[0] = NewMutex(clients[0], lockPath)
+	assert.Equal(locks[0].Acquire(1, time.Second), nil)
 
-	for idx := 0; idx < lc; idx++ {
-		lock := NewMutex(clients[idx], lockPath)
-		assert.Equal(lock.Acquire(1, time.Second).Error(), "Timeout")
+	for idx := 1; idx < lc; idx++ {
+		locks[idx] = NewMutex(clients[idx], lockPath)
+		assert.Equal(locks[idx].Acquire(1, time.Second).Error(), "Timeout")
 	}
 
-	assert.Equal(firstLock.Release(), nil)
-
+	assert.Equal(locks[0].Release(), nil)
 	closeClients(clients)
 }
 

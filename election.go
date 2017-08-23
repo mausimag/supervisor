@@ -132,7 +132,7 @@ func (rs *RoleSelector) notify(event zk.Event) {
 func (rs *RoleSelector) Stop() error {
 	rs.close <- true
 
-	if err := rs.client.deleteNode(rs.nodePath); err != nil {
+	if err := rs.client.deleteNodeLastVersion(rs.nodePath); err != nil {
 		return fmt.Errorf("Could not remove node %s - %s", rs.nodePath, err.Error())
 	}
 

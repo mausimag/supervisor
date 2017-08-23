@@ -56,6 +56,9 @@ func (m *Mutex) Acquire(waitTime int64, unit time.Duration) error {
 
 		select {
 		case <-timeout:
+			if err := m.client.deleteNodeLastVersion(m.lockPath); err != nil {
+				return fmt.Errorf("Could not remove node %s - %s", m.path, err.Error())
+			}
 			return errors.New("Timeout")
 		case event := <-channel:
 			if event.Type == zk.EventNodeChildrenChanged {
@@ -89,21 +92,14 @@ func (m *Mutex) Release() error {
 }
 
 func (m *Mutex) cleanup() error {
-	if err := m.client.deleteNode(m.lockPath); err != nil {
+	if err := m.client.deleteNodeLastVersion(m.lockPath); err != nil {
 		return fmt.Errorf("Could not remove node %s - %s", m.path, err.Error())
 	}
 
 	m.locked = false
 
-	nodeGUIDList, err := m.client.getSortedNodeGUIDList(m.path)
-	if err != nil {
+	if err := m.client.deleteNodeLastVersion(m.path); err != nil {
 		return err
-	}
-
-	if len(nodeGUIDList) == 0 {
-		if err := m.client.deleteBaseNode(m.path); err != nil {
-			return err
-		}
 	}
 
 	m.guid = ""
