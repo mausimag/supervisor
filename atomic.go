@@ -3,6 +3,7 @@ package supervisor
 import (
 	"bytes"
 	"errors"
+	"time"
 
 	"github.com/samuel/go-zookeeper/zk"
 )
@@ -17,8 +18,11 @@ type MutableAtomicValue struct {
 }
 
 type atomicValue struct {
-	client *Client
-	path   string
+	client         *Client
+	path           string
+	MaxRetries     int
+	RetryDelay     int
+	RetryDelayUnit time.Duration
 }
 
 func (av *atomicValue) getCurrentValue(result *MutableAtomicValue, _stat *zk.Stat) (bool, error) {
@@ -75,8 +79,32 @@ func (av *atomicValue) compareAndSet(expected, newValue []byte) error {
 }
 
 func (av *atomicValue) trySet(makeValue MakeValue) error {
-	stat := new(zk.Stat)
+	return av.tryOptimistic(makeValue)
+}
+
+// tryOptimistic tries to set the value. In case of error it
+// will try again X (RetryCount) times with delay (RetryDelay).
+// Each time it receives an error, RetryDelay is increased with
+// with the following: RetryDelay = RetryDelay * 3 / 2 + 1
+func (av *atomicValue) tryOptimistic(makeValue MakeValue) error {
 	result := new(MutableAtomicValue)
+	retryCount := 0
+	retryDelay := av.RetryDelay
+
+	for retryCount < av.MaxRetries {
+		if err := av.tryOnce(result, makeValue); err == nil {
+			return nil
+		}
+
+		time.Sleep(time.Duration(retryDelay) * av.RetryDelayUnit)
+		retryDelay = retryDelay*3/2 + 1 // increase delay time
+		retryCount++
+	}
+	return nil
+}
+
+func (av *atomicValue) tryOnce(result *MutableAtomicValue, makeValue MakeValue) error {
+	stat := new(zk.Stat)
 
 	exists, err := av.getCurrentValue(result, stat)
 	if err != nil {
@@ -100,7 +128,10 @@ func (av *atomicValue) trySet(makeValue MakeValue) error {
 
 func newAtomicValue(client *Client, path string) *atomicValue {
 	return &atomicValue{
-		client: client,
-		path:   path,
+		client:         client,
+		path:           path,
+		MaxRetries:     3,
+		RetryDelay:     2,
+		RetryDelayUnit: time.Second,
 	}
 }
