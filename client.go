@@ -12,12 +12,14 @@ import (
 var defaultClient = &Client{
 	clusterName:    "local",
 	zookeeperNodes: "127.0.0.1",
+	logger:         DefaultLogger{},
 }
 
 // Client holds connection information
 type Client struct {
 	clusterName    string
 	zookeeperNodes string
+	logger         Logger
 
 	zkConn      *zk.Conn
 	guid        string
@@ -42,6 +44,14 @@ func SetZookeeperNodes(zookeeperNodes string) NodeOpionsFunc {
 	}
 }
 
+// SetLogger logger
+func SetLogger(l Logger) NodeOpionsFunc {
+	return func(c *Client) error {
+		c.logger = l
+		return nil
+	}
+}
+
 // SetNodeReceiveMessageCallback registers callback function when node receives a message
 func SetNodeReceiveMessageCallback(receiveMessageCb NodeReceiveMessageFunc) NodeOpionsFunc {
 	return func(c *Client) error {
@@ -59,6 +69,7 @@ func (c *Client) Connect() error {
 		return err
 	}
 
+	c.zkConn.SetLogger(c.logger)
 	c.isConnected = true
 
 	return nil
@@ -186,6 +197,7 @@ func NewClient(options ...NodeOpionsFunc) *Client {
 		clusterName:    defaultClient.clusterName,
 		currentRole:    NodeRoleSlave,
 		zookeeperNodes: defaultClient.zookeeperNodes,
+		logger:         defaultClient.logger,
 	}
 
 	for _, option := range options {
