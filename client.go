@@ -65,7 +65,7 @@ func (c *Client) Connect() error {
 }
 
 func (c *Client) checkAndGetNode(path string) ([]byte, *zk.Stat, error) {
-	if exists, _, err := c.nodeExists(path); err != nil || !exists {
+	if exists, _, err := c.zkConn.Exists(path); err != nil || !exists {
 		return nil, nil, err
 	}
 
@@ -158,23 +158,20 @@ func (c *Client) deleteBaseNode(path string) error {
 	return nil
 }
 
-func (c *Client) nodeExists(path string) (bool, *zk.Stat, error) {
-	exists, stat, err := c.zkConn.Exists(path)
-	if !exists {
-		err = fmt.Errorf("Node %s does not exists", path)
-	}
-	return exists, stat, err
-}
-
 func (c *Client) deleteNode(path string, version int32) error {
 	return c.zkConn.Delete(path, version)
 }
 
 func (c *Client) deleteNodeLastVersion(path string) error {
-	exists, stat, err := c.nodeExists(path)
-	if err != nil || !exists {
+	exists, stat, err := c.zkConn.Exists(path)
+	if err != nil {
 		return err
 	}
+
+	if !exists {
+		return nil
+	}
+
 	return c.zkConn.Delete(path, stat.Version)
 }
 
