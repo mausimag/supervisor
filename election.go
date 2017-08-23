@@ -136,6 +136,17 @@ func (rs *RoleSelector) Stop() error {
 		return fmt.Errorf("Could not remove node %s - %s", rs.nodePath, err.Error())
 	}
 
+	nodeGUIDList, err := rs.client.getSortedNodeGUIDList(rs.path)
+	if err != nil {
+		return err
+	}
+
+	if len(nodeGUIDList) == 0 {
+		if err := rs.client.deleteNodeLastVersion(rs.path); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

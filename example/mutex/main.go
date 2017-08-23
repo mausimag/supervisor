@@ -37,7 +37,7 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
-	lockPath := "/group01/inner01/key01"
+	lockPath := "/supervisor/example/mutex/key01"
 	lock := supervisor.NewMutex(client, lockPath)
 
 	if err := lock.Acquire(60, time.Second); err == nil {

@@ -20,7 +20,7 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
-	vint64 := supervisor.NewAtomicUint64(client, "/vars/var01")
+	vint64 := supervisor.NewAtomicUint64(client, "/supervisor/example/atomic/uint64/var01")
 	fmt.Println(vint64.TrySet(5))
 	fmt.Println(vint64.Get())
 	fmt.Println(vint64.Increment())

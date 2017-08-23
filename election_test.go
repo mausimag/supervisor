@@ -2,7 +2,6 @@ package supervisor
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -69,9 +68,12 @@ func TestElectionDisconnect(t *testing.T) {
 	assert.Equal(election[1].Role, NodeRoleSlave)
 
 	election[0].Stop()
-	time.Sleep(2 * time.Second)
+
+	<-election[1].IsMaster
 
 	assert.Equal(election[1].Role, NodeRoleMaster)
+
+	election[1].Stop()
 
 	closeClients(clients)
 }

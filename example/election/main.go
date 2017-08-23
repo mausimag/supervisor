@@ -20,7 +20,7 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
-	election := supervisor.NewRoleSelector(client, "/election/test01")
+	election := supervisor.NewRoleSelector(client, "/supervisor/example/election")
 	election.Start()
 
 	for {
